@@ -1,1 +1,1 @@
-module.exports = require("tailwindcss");
+export { default } from "tailwindcss";
