@@ -1,0 +1,2 @@
+LLM prompt</br>
+```You are a financial analyst. Analyze the following company news and return ONLY JSON: 1. Bias: Bullish / Bearish / Neutral 2. Confidence score: 0–10 3. One-line reasoning News: "Maruti Sales Feb 2026 – Domestic Stagnant, Exports Grow 56%```
