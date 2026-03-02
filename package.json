@@ -2,7 +2,6 @@
   "name": "aegis",
   "version": "1.0.0",
   "private": true,
-  "type": "commonjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,9 +14,7 @@
     "next": "^14.2.25",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-
     "@hookform/resolvers": "^3.10.0",
-
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -45,9 +42,7 @@
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
-
     "@tanstack/react-query": "^5.83.0",
-
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -70,16 +65,14 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.25",
     "eslint-plugin-react-hooks": "^4.6.2",
-
     "@testing-library/react": "^16.0.0",
     "@testing-library/jest-dom": "^6.6.0",
     "jsdom": "^20.0.3",
-
     "vitest": "^3.2.4",
-
     "tailwindcss": "^3.4.17",
     "postcss": "^8.5.6",
     "autoprefixer": "^10.4.21",
-    "@tailwindcss/typography": "^0.5.16"
+    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/postcss": "file:vendor/tailwindcss-postcss"
   }
 }

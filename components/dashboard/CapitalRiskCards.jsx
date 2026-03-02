@@ -53,7 +53,7 @@ export function CapitalRiskCards() {
       <Card>
         <CardHeader className="pb-2 p-4">
           <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3"/> Today's PnL
+            <TrendingUp className="h-3 w-3"/> Today&apos;s PnL
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
