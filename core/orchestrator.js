@@ -7,6 +7,7 @@ import { runLlmEventEngine } from "@/core/llmEventEngine";
 import { simulatePaperTrade } from "@/execution/paperBroker";
 import { fetchNseAnnouncements } from "@/services/nseService";
 import { fetchTier1RssFeeds } from "@/services/rssService";
+import { fetchSmartApiMarketData } from "@/services/smartApiService";
 
 function defaultEvent() {
   return {
@@ -25,10 +26,14 @@ export async function orchestrator() {
   };
 
   try {
-    const [nse, rss] = await Promise.all([fetchNseAnnouncements(), fetchTier1RssFeeds()]);
+    const [nse, rss, smartApi] = await Promise.all([
+      fetchNseAnnouncements(),
+      fetchTier1RssFeeds(),
+      fetchSmartApiMarketData(),
+    ]);
 
     const combinedRawFeed = [...(nse.items || []), ...(rss.items || [])];
-    const eventFeed = processFeed(combinedRawFeed);
+    const eventFeed = processFeed(combinedRawFeed, smartApi.marketData || {});
     const topEvent = eventFeed[0] || defaultEvent();
 
     const llmSummary = await runLlmEventEngine(topEvent);
@@ -64,7 +69,7 @@ export async function orchestrator() {
 
     timestamps.processed_at = new Date().toISOString();
 
-    const sourceErrors = [nse.error?.message, rss.error?.message].filter(Boolean);
+    const sourceErrors = [nse.error?.message, rss.error?.message, smartApi.error?.message].filter(Boolean);
 
     return {
       ok: true,
@@ -77,6 +82,7 @@ export async function orchestrator() {
         nse_announcements: nse.items || [],
         combined_feed: eventFeed,
         rss_news: rss.items || [],
+        market_data: smartApi.marketData || {},
         source_errors: sourceErrors,
       },
       llm_summary: {
