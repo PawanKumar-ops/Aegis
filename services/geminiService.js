@@ -1,22 +1,33 @@
 import { fetchWithTimeout } from "@/utils/timeout";
-import { parseModelJson, safeText, validateModelAnalysis } from "@/utils/validators";
+import { parseModelJson, safeText, validateEdgeLlmSummary } from "@/utils/validators";
 
 const SYSTEM_PROMPT = [
-  "You are a risk-aware Indian equities event analyst.",
-  "Return strictly JSON with keys: bias, confidence, reasoning.",
-  "bias must be one of Bullish|Bearish|Neutral.",
+  "You are an event-driven Indian equities analyst.",
+  "Return strictly JSON with keys: event_type, direction, confidence, reasoning.",
+  "event_type must be one of earnings|dividend|buyback|promoter_change|regulatory|macro|other.",
+  "direction must be one of bullish|bearish|neutral.",
   "confidence must be in the range 0..10.",
-  "If event data is sparse, lower confidence.",
 ].join(" ");
 
-function buildPrompt(feedSummary) {
-  return ["Analyze this event feed for short-horizon directional bias.", "Return JSON only.", feedSummary || "No events available."].join("\n\n");
+function buildPrompt(event) {
+  return [
+    SYSTEM_PROMPT,
+    `symbol: ${safeText(event?.symbol) || "UNKNOWN"}`,
+    `source_type: ${safeText(event?.type) || "unknown"}`,
+    `title: ${safeText(event?.title) || "Untitled"}`,
+    `description: ${safeText(event?.description) || "No description"}`,
+  ].join("\n");
 }
 
-export async function analyzeWithGemini(feedSummary) {
+export async function analyzeWithGemini(event = {}) {
   const apiKey = safeText(process.env.GEMINI_API_KEY);
   if (!apiKey) {
-    return { ok: false, analysis: null, raw: null, error: { code: "GEMINI_DISABLED", message: "GEMINI_API_KEY is missing." } };
+    return {
+      ok: false,
+      analysis: null,
+      raw: null,
+      error: { code: "GEMINI_DISABLED", message: "GEMINI_API_KEY is missing." },
+    };
   }
 
   try {
@@ -24,7 +35,7 @@ export async function analyzeWithGemini(feedSummary) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const body = {
-      contents: [{ role: "user", parts: [{ text: `${SYSTEM_PROMPT}\n\n${buildPrompt(feedSummary)}` }] }],
+      contents: [{ role: "user", parts: [{ text: buildPrompt(event) }] }],
       generationConfig: {
         temperature: 0.1,
         responseMimeType: "application/json",
@@ -44,7 +55,7 @@ export async function analyzeWithGemini(feedSummary) {
     const payload = await result.response.json();
     const raw = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text).join("\n") || "";
     const parsed = parseModelJson(raw);
-    const validated = validateModelAnalysis(parsed);
+    const validated = validateEdgeLlmSummary(parsed);
 
     if (!validated.ok) {
       return {
@@ -57,6 +68,11 @@ export async function analyzeWithGemini(feedSummary) {
 
     return { ok: true, analysis: validated.data, raw, error: null };
   } catch (error) {
-    return { ok: false, analysis: null, raw: null, error: { code: "GEMINI_ERROR", message: error?.message || "Gemini call failed." } };
+    return {
+      ok: false,
+      analysis: null,
+      raw: null,
+      error: { code: "GEMINI_ERROR", message: error?.message || "Gemini call failed." },
+    };
   }
 }

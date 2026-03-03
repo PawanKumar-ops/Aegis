@@ -1,22 +1,33 @@
 import { fetchWithTimeout } from "@/utils/timeout";
-import { parseModelJson, safeText, validateModelAnalysis } from "@/utils/validators";
+import { parseModelJson, safeText, validateEdgeLlmSummary } from "@/utils/validators";
 
 const SYSTEM_PROMPT = [
-  "You are a risk-aware Indian equities event analyst.",
-  "Return strictly JSON with keys: bias, confidence, reasoning.",
-  "bias must be one of Bullish|Bearish|Neutral.",
+  "You are an event-driven Indian equities analyst.",
+  "Return strictly JSON with keys: event_type, direction, confidence, reasoning.",
+  "event_type must be one of earnings|dividend|buyback|promoter_change|regulatory|macro|other.",
+  "direction must be one of bullish|bearish|neutral.",
   "confidence must be in the range 0..10.",
-  "If event data is sparse, lower confidence.",
 ].join(" ");
 
-function buildPrompt(feedSummary) {
-  return ["Analyze this event feed for short-horizon directional bias.", "Return JSON only.", feedSummary || "No events available."].join("\n\n");
+function buildPrompt(event) {
+  return [
+    "Classify this event and provide confidence.",
+    `symbol: ${safeText(event?.symbol) || "UNKNOWN"}`,
+    `source_type: ${safeText(event?.type) || "unknown"}`,
+    `title: ${safeText(event?.title) || "Untitled"}`,
+    `description: ${safeText(event?.description) || "No description"}`,
+  ].join("\n");
 }
 
-export async function analyzeWithOpenAI(feedSummary) {
+export async function analyzeWithOpenAI(event = {}) {
   const apiKey = safeText(process.env.OPENAI_API_KEY);
   if (!apiKey) {
-    return { ok: false, analysis: null, raw: null, error: { code: "OPENAI_DISABLED", message: "OPENAI_API_KEY is missing." } };
+    return {
+      ok: false,
+      analysis: null,
+      raw: null,
+      error: { code: "OPENAI_DISABLED", message: "OPENAI_API_KEY is missing." },
+    };
   }
 
   try {
@@ -27,7 +38,7 @@ export async function analyzeWithOpenAI(feedSummary) {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildPrompt(feedSummary) },
+        { role: "user", content: buildPrompt(event) },
       ],
     };
 
@@ -47,7 +58,7 @@ export async function analyzeWithOpenAI(feedSummary) {
     const payload = await result.response.json();
     const raw = payload?.choices?.[0]?.message?.content || "";
     const parsed = parseModelJson(raw);
-    const validated = validateModelAnalysis(parsed);
+    const validated = validateEdgeLlmSummary(parsed);
 
     if (!validated.ok) {
       return {
@@ -60,6 +71,11 @@ export async function analyzeWithOpenAI(feedSummary) {
 
     return { ok: true, analysis: validated.data, raw, error: null };
   } catch (error) {
-    return { ok: false, analysis: null, raw: null, error: { code: "OPENAI_ERROR", message: error?.message || "OpenAI call failed." } };
+    return {
+      ok: false,
+      analysis: null,
+      raw: null,
+      error: { code: "OPENAI_ERROR", message: error?.message || "OpenAI call failed." },
+    };
   }
 }

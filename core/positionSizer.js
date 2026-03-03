@@ -1,41 +1,42 @@
 const DEFAULT_RISK_PER_TRADE_PCT = Number(process.env.RISK_PER_TRADE_PCT || 1);
-const DEFAULT_ATR_MULTIPLIER = Number(process.env.ATR_MULTIPLIER || 2);
 const DEFAULT_ATR = Number(process.env.DEFAULT_ATR || 10);
+const DEFAULT_ATR_MULTIPLIER = Number(process.env.ATR_MULTIPLIER || 2);
 
-function estimateStopDistance() {
-  return DEFAULT_ATR * DEFAULT_ATR_MULTIPLIER;
-}
-
-export function calculatePositionSize({ capital, entryPrice }) {
+export function calculatePositionSize({ capital, entry_price, direction = "bullish" } = {}) {
   try {
     const accountCapital = Number(capital || process.env.TRADING_CAPITAL || 0);
-    const price = Number(entryPrice || 0);
+    const entry = Number(entry_price || process.env.DEFAULT_ENTRY_PRICE || 0);
 
-    if (!accountCapital || !price) {
+    if (accountCapital <= 0 || entry <= 0) {
       return {
-        ok: false,
-        error: { code: "INVALID_CAPITAL_OR_PRICE", message: "capital and entryPrice are required." },
+        stop_price: 0,
+        quantity: 0,
+        risk_amount: 0,
+        error: "invalid capital or entry price",
       };
     }
 
-    const riskAmount = accountCapital * (DEFAULT_RISK_PER_TRADE_PCT / 100);
-    const stopDistance = estimateStopDistance();
-    const quantity = Math.max(0, Math.floor(riskAmount / stopDistance));
+    const risk_amount = Number((accountCapital * (DEFAULT_RISK_PER_TRADE_PCT / 100)).toFixed(2));
+    const stopDistance = Math.max(0.01, DEFAULT_ATR * DEFAULT_ATR_MULTIPLIER);
+
+    const stop_price =
+      direction === "bearish"
+        ? Number((entry + stopDistance).toFixed(2))
+        : Number((entry - stopDistance).toFixed(2));
+
+    const quantity = Math.max(0, Math.floor(risk_amount / stopDistance));
 
     return {
-      ok: true,
-      data: {
-        riskAmount,
-        stopDistance,
-        quantity,
-        stopLoss: Math.max(0, price - stopDistance),
-      },
-      error: null,
+      stop_price,
+      quantity,
+      risk_amount,
     };
-  } catch (error) {
+  } catch {
     return {
-      ok: false,
-      error: { code: "POSITION_SIZE_ERROR", message: error?.message || "Position size computation failed." },
+      stop_price: 0,
+      quantity: 0,
+      risk_amount: 0,
+      error: "position sizing failed",
     };
   }
 }
