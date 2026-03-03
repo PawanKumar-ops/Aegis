@@ -246,7 +246,18 @@ export function LLMContextPanel() {
               nseFeed.slice(0, 8).map((item, index) => (
                 <div key={`${item.symbol}-${item.time}-${index}`} className="mb-2">
                   <div className="font-semibold text-xs">[{item.type}] {item.symbol}</div>
-                  <div className="text-xs">{item.title}</div>
+                  {item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs underline-offset-2 hover:underline"
+                    >
+                      {item.title}
+                    </a>
+                  ) : (
+                    <div className="text-xs">{item.title}</div>
+                  )}
                 </div>
               ))
             ) : (
