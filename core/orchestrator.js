@@ -81,12 +81,6 @@ export async function orchestrator() {
         reasoning: llmSummary.reasoning,
         model_meta: llmSummary.model_meta,
       },
-      fetched_news: {
-        nse_announcements: nse.items || [],
-        tier1_rss: rss.items || [],
-        combined_feed: eventFeed,
-        source_errors: [nse.error, rss.error].filter(Boolean),
-      },
       liquidity,
       regime,
       risk,
@@ -115,17 +109,7 @@ export async function orchestrator() {
           selected_model: "fallback",
           providers_ok: [],
           providers_failed: ["openai", "gemini"],
-          provider_status: {
-            openai: { ok: false, analysis: null, error: { code: "NO_RESULT", message: "No provider result" } },
-            gemini: { ok: false, analysis: null, error: { code: "NO_RESULT", message: "No provider result" } },
-          },
         },
-      },
-      fetched_news: {
-        nse_announcements: [],
-        tier1_rss: [],
-        combined_feed: [],
-        source_errors: [error?.message || "Unknown orchestrator error"],
       },
       liquidity: {
         confirm_liquidity: false,

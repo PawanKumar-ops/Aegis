@@ -51,9 +51,12 @@ function mergeAnalyses(openaiAnalysis, geminiAnalysis) {
   const primary = sorted[0];
   const secondary = sorted[1];
 
-  return {
-    event_type: primary.analysis.event_type || DEFAULT_RESULT.event_type,
-    direction: primary.analysis.direction || DEFAULT_RESULT.direction,
+  const event_type = primary.analysis.event_type || DEFAULT_RESULT.event_type;
+  const direction = primary.analysis.direction || DEFAULT_RESULT.direction;
+
+  const merged = {
+    event_type,
+    direction,
     materiality_score: mergeNumeric(primary.analysis, secondary?.analysis, "materiality_score"),
     surprise_score: mergeNumeric(primary.analysis, secondary?.analysis, "surprise_score"),
     impact_score: mergeNumeric(primary.analysis, secondary?.analysis, "impact_score"),
@@ -65,10 +68,13 @@ function mergeAnalyses(openaiAnalysis, geminiAnalysis) {
       providers_failed: ["openai", "gemini"].filter((provider) => !candidates.some((entry) => entry.provider === provider)),
     },
   };
+
+  return merged;
 }
 
 export async function runLlmEventEngine(event = {}) {
   const [openai, gemini] = await Promise.all([analyzeWithOpenAI(event), analyzeWithGemini(event)]);
+
   const merged = mergeAnalyses(openai.ok ? openai.analysis : null, gemini.ok ? gemini.analysis : null);
 
   return {
@@ -76,16 +82,8 @@ export async function runLlmEventEngine(event = {}) {
     model_meta: {
       ...merged.model_meta,
       provider_status: {
-        openai: {
-          ok: openai.ok,
-          analysis: openai.analysis || null,
-          error: openai.error || null,
-        },
-        gemini: {
-          ok: gemini.ok,
-          analysis: gemini.analysis || null,
-          error: gemini.error || null,
-        },
+        openai: { ok: openai.ok, error: openai.error || null },
+        gemini: { ok: gemini.ok, error: gemini.error || null },
       },
     },
   };
