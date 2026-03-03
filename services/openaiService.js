@@ -1,17 +1,18 @@
 import { fetchWithTimeout } from "@/utils/timeout";
-import { parseModelJson, safeText, validateEdgeLlmSummary } from "@/utils/validators";
+import { parseModelJson, safeText, validateLlmEventOutput } from "@/utils/validators";
 
 const SYSTEM_PROMPT = [
   "You are an event-driven Indian equities analyst.",
-  "Return strictly JSON with keys: event_type, direction, confidence, reasoning.",
+  "Return strictly JSON with keys: event_type, direction, materiality_score, surprise_score, impact_score, confidence, reasoning.",
   "event_type must be one of earnings|dividend|buyback|promoter_change|regulatory|macro|other.",
   "direction must be one of bullish|bearish|neutral.",
-  "confidence must be in the range 0..10.",
+  "materiality_score, surprise_score, impact_score, confidence must be in range 0..10.",
+  "reasoning should be concise and factual.",
 ].join(" ");
 
 function buildPrompt(event) {
   return [
-    "Classify this event and provide confidence.",
+    "Analyze this market event and quantify materiality, surprise, and impact.",
     `symbol: ${safeText(event?.symbol) || "UNKNOWN"}`,
     `source_type: ${safeText(event?.type) || "unknown"}`,
     `title: ${safeText(event?.title) || "Untitled"}`,
@@ -25,7 +26,6 @@ export async function analyzeWithOpenAI(event = {}) {
     return {
       ok: false,
       analysis: null,
-      raw: null,
       error: { code: "OPENAI_DISABLED", message: "OPENAI_API_KEY is missing." },
     };
   }
@@ -52,29 +52,26 @@ export async function analyzeWithOpenAI(event = {}) {
     });
 
     if (!result?.ok) {
-      return { ok: false, analysis: null, raw: null, error: result.error };
+      return { ok: false, analysis: null, error: result.error };
     }
 
     const payload = await result.response.json();
-    const raw = payload?.choices?.[0]?.message?.content || "";
-    const parsed = parseModelJson(raw);
-    const validated = validateEdgeLlmSummary(parsed);
+    const parsed = parseModelJson(payload?.choices?.[0]?.message?.content || "");
+    const validated = validateLlmEventOutput(parsed);
 
     if (!validated.ok) {
       return {
         ok: false,
         analysis: null,
-        raw,
         error: { code: "OPENAI_INVALID_OUTPUT", message: validated.error },
       };
     }
 
-    return { ok: true, analysis: validated.data, raw, error: null };
+    return { ok: true, analysis: validated.data, error: null };
   } catch (error) {
     return {
       ok: false,
       analysis: null,
-      raw: null,
       error: { code: "OPENAI_ERROR", message: error?.message || "OpenAI call failed." },
     };
   }
