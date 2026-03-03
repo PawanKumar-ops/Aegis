@@ -169,6 +169,9 @@ export function LLMContextPanel() {
           {(llmResponse?.errors || []).length > 0 && (
             <div className="text-xs text-loss">{llmResponse.errors.join(" ")}</div>
           )}
+          {llmResponse?.error && (
+            <div className="text-xs text-loss">{llmResponse.error}</div>
+          )}
         </CardContent>
       </Card>
     </>
