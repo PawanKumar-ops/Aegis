@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { llmContext } from "@/data/mockData";
-import { Brain, TrendingUp, TrendingDown, Minus, HelpCircle, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, HelpCircle, AlertTriangle } from "lucide-react";
 
 const regimeConfig = {
   BULLISH: { icon: TrendingUp, color: "text-profit" },
@@ -81,9 +81,7 @@ const ProviderDetail = ({ providerPayload }) => {
         </div>
       </div>
 
-      {providerPayload?.error?.message && (
-        <p className="text-xs text-loss">{providerPayload.error.message}</p>
-      )}
+      {providerPayload?.error?.message && <p className="text-xs text-loss">{providerPayload.error.message}</p>}
     </div>
   );
 };
@@ -197,29 +195,18 @@ export function LLMContextPanel() {
     loadContext();
   }, []);
 
-  const openAiPayload = llmResponse?.llm_summary?.model_meta?.provider_status?.openai || null;
   const geminiPayload = llmResponse?.llm_summary?.model_meta?.provider_status?.gemini || null;
-
-  const openAiData = useMemo(() => derivePanelData(openAiPayload?.analysis), [openAiPayload]);
   const geminiData = useMemo(() => derivePanelData(geminiPayload?.analysis), [geminiPayload]);
   const instrumentMeta = useMemo(() => deriveInstrumentMeta(llmResponse), [llmResponse]);
 
-  const averageConfidence = (((openAiData.confidence + geminiData.confidence) / 2) * 100).toFixed(0);
-  const tradable = Number(averageConfidence) >= 70;
+  const confidence = (geminiData.confidence * 100).toFixed(0);
+  const tradable = Number(confidence) >= 70;
 
   const rssNews = llmResponse?.fetched_news?.rss_news || [];
   const nseFeed = llmResponse?.fetched_news?.nse_announcements || [];
 
   return (
     <>
-      <ContextCard
-        title="OpenAI Context & Market Regime"
-        panelData={openAiData}
-        providerPayload={openAiPayload}
-        instrumentMeta={instrumentMeta}
-        icon={<Brain className="h-4 w-4 text-foreground/80" />}
-      />
-
       <ContextCard
         title="Gemini Context & Market Regime"
         panelData={geminiData}
@@ -230,9 +217,9 @@ export function LLMContextPanel() {
 
       <Card className="p-4 space-y-2">
         <div className={tradable ? "text-green-500" : "text-loss"}>
-          {tradable ? "Tradable - Average confidence ≥ 70%" : "No Trade Zone - Average confidence < 70%"}
+          {tradable ? "Tradable - Confidence ≥ 70%" : "No Trade Zone - Confidence < 70%"}
         </div>
-        <div>LLM Overall Confidence {averageConfidence}%</div>
+        <div>LLM Confidence {confidence}%</div>
       </Card>
 
       <Card>
@@ -289,11 +276,6 @@ export function LLMContextPanel() {
               <p className="text-xs text-muted-foreground">No news returned yet.</p>
             )}
           </div>
-
-          {(llmResponse?.fetched_news?.source_errors || []).length > 0 && (
-            <div className="text-xs text-loss">{llmResponse.fetched_news.source_errors.join(" | ")}</div>
-          )}
-          {llmResponse?.error && <div className="text-xs text-loss">{llmResponse.error}</div>}
         </CardContent>
       </Card>
     </>
