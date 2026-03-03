@@ -82,8 +82,8 @@ export async function runLlmEventEngine(event = {}) {
     model_meta: {
       ...merged.model_meta,
       provider_status: {
-        openai: { ok: openai.ok, error: openai.error || null },
-        gemini: { ok: gemini.ok, error: gemini.error || null },
+        openai: { ok: openai.ok, analysis: openai.analysis || null, error: openai.error || null },
+        gemini: { ok: gemini.ok, analysis: gemini.analysis || null, error: gemini.error || null },
       },
     },
   };
