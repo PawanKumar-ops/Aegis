@@ -14,7 +14,7 @@ export function evaluateMarketRegime() {
 
     return {
       regime_ok,
-      regime: {
+      regime_details: {
         indexTrendDirection,
         volatilityState,
       },
@@ -22,7 +22,7 @@ export function evaluateMarketRegime() {
   } catch {
     return {
       regime_ok: false,
-      regime: {
+      regime_details: {
         indexTrendDirection: "sideways",
         volatilityState: "high",
       },
