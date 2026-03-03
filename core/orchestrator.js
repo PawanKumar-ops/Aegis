@@ -116,7 +116,7 @@ export async function orchestrator() {
         model_meta: {
           selected_model: "fallback",
           providers_ok: [],
-          providers_failed: ["openai", "gemini"],
+          providers_failed: ["gemini"],
         },
       },
       liquidity: {
