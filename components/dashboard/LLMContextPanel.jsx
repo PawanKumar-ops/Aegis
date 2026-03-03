@@ -80,9 +80,8 @@ const ContextCard = ({ title, icon, panelData }) => {
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-muted-foreground">Confidence</span>
             <span
-              className={`text-sm font-mono-data font-semibold ${
-                panelData.confidence >= 0.6 ? "text-profit" : "text-loss"
-              }`}
+              className={`text-sm font-mono-data font-semibold ${panelData.confidence >= 0.6 ? "text-profit" : "text-loss"
+                }`}
             >
               {(panelData.confidence * 100).toFixed(0)}%
             </span>
@@ -156,11 +155,13 @@ export function LLMContextPanel() {
           <CardTitle className="text-sm font-medium">Fetched News (NewsAPI)</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0 space-y-2">
-          {(llmResponse?.news || []).length ? (
-            llmResponse.news.map((article) => (
-              <div key={article.id} className="text-xs border-b border-border pb-2 last:border-b-0">
-                <div className="font-semibold">{article.title}</div>
-                <div className="text-muted-foreground">{article.source}</div>
+          {(llmResponse?.combinedFeed || []).length ? (
+            llmResponse.combinedFeed.map((item, index) => (
+              <div key={index}>
+                <div className="font-semibold">
+                  [{item.type}] {item.symbol}
+                </div>
+                <div>{item.title}</div>
               </div>
             ))
           ) : (
