@@ -64,6 +64,8 @@ export async function orchestrator() {
 
     timestamps.processed_at = new Date().toISOString();
 
+    const sourceErrors = [nse.error?.message, rss.error?.message].filter(Boolean);
+
     return {
       ok: true,
       symbol: topEvent.symbol,
@@ -71,6 +73,11 @@ export async function orchestrator() {
       title: topEvent.title,
       description: topEvent.description,
       timestamps,
+      fetched_news: {
+        nse_announcements: nse.items || [],
+        combined_feed: eventFeed,
+        source_errors: sourceErrors,
+      },
       llm_summary: {
         event_type: llmSummary.event_type,
         direction: llmSummary.direction,

@@ -34,7 +34,61 @@ const derivePanelData = (analysis) => {
   };
 };
 
-const ContextCard = ({ title, icon, panelData, providerPayload }) => {
+const deriveInstrumentMeta = (response) => {
+  const symbol = response?.symbol || "NIFTY";
+  const headline = response?.title || "No headline available";
+  const isIndex = ["NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX"].includes(String(symbol).toUpperCase());
+
+  return {
+    companyOrIndex: symbol,
+    market: "NSE / Indian Equities",
+    instrumentType: isIndex ? "Index" : "Company",
+    headline,
+  };
+};
+
+const ProviderDetail = ({ providerPayload }) => {
+  const analysis = providerPayload?.analysis || null;
+
+  return (
+    <div className="rounded border border-border p-3 bg-muted/30 space-y-2">
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <p className="text-muted-foreground">Provider Status</p>
+          <p className={providerPayload?.ok ? "text-profit font-semibold" : "text-loss font-semibold"}>
+            {providerPayload?.ok ? "Available" : "Unavailable"}
+          </p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Event Type</p>
+          <p className="font-medium">{analysis?.event_type || "-"}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Direction</p>
+          <p className="font-medium capitalize">{analysis?.direction || "-"}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Impact Score</p>
+          <p className="font-medium">{analysis?.impact_score ?? "-"}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Materiality</p>
+          <p className="font-medium">{analysis?.materiality_score ?? "-"}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Surprise Score</p>
+          <p className="font-medium">{analysis?.surprise_score ?? "-"}</p>
+        </div>
+      </div>
+
+      {providerPayload?.error?.message && (
+        <p className="text-xs text-loss">{providerPayload.error.message}</p>
+      )}
+    </div>
+  );
+};
+
+const ContextCard = ({ title, icon, panelData, providerPayload, instrumentMeta }) => {
   const cfg = regimeConfig[panelData.regime] || regimeConfig.UNCLEAR;
   const Icon = cfg.icon;
   const isNoTradeZone = panelData.confidence < 0.6;
@@ -59,6 +113,21 @@ const ContextCard = ({ title, icon, panelData, providerPayload }) => {
       </CardHeader>
 
       <CardContent className="p-4 pt-0 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded border border-border p-3 bg-muted/20 text-xs">
+          <div>
+            <p className="text-muted-foreground">Company / Index</p>
+            <p className="font-semibold">{instrumentMeta.companyOrIndex}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Market</p>
+            <p className="font-semibold">{instrumentMeta.market}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Type</p>
+            <p className="font-semibold">{instrumentMeta.instrumentType}</p>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">Regime</span>
           <div className="flex items-center gap-1.5">
@@ -93,10 +162,13 @@ const ContextCard = ({ title, icon, panelData, providerPayload }) => {
         </div>
 
         <div>
-          <span className="text-xs text-muted-foreground block mb-1">Model Response</span>
-          <pre className="rounded border border-border bg-muted p-2 text-[11px] overflow-x-auto whitespace-pre-wrap">
-            {JSON.stringify(providerPayload || null, null, 2)}
-          </pre>
+          <span className="text-xs text-muted-foreground block mb-1">Latest Headline</span>
+          <p className="text-xs">{instrumentMeta.headline}</p>
+        </div>
+
+        <div>
+          <span className="text-xs text-muted-foreground block mb-1">Model Insights</span>
+          <ProviderDetail providerPayload={providerPayload} />
         </div>
 
         <div className="flex items-center justify-between pt-1 border-t border-border">
@@ -130,6 +202,7 @@ export function LLMContextPanel() {
 
   const openAiData = useMemo(() => derivePanelData(openAiPayload?.analysis), [openAiPayload]);
   const geminiData = useMemo(() => derivePanelData(geminiPayload?.analysis), [geminiPayload]);
+  const instrumentMeta = useMemo(() => deriveInstrumentMeta(llmResponse), [llmResponse]);
 
   const averageConfidence = (((openAiData.confidence + geminiData.confidence) / 2) * 100).toFixed(0);
   const tradable = Number(averageConfidence) >= 70;
@@ -143,6 +216,7 @@ export function LLMContextPanel() {
         title="OpenAI Context & Market Regime"
         panelData={openAiData}
         providerPayload={openAiPayload}
+        instrumentMeta={instrumentMeta}
         icon={<Brain className="h-4 w-4 text-foreground/80" />}
       />
 
@@ -150,6 +224,7 @@ export function LLMContextPanel() {
         title="Gemini Context & Market Regime"
         panelData={geminiData}
         providerPayload={geminiPayload}
+        instrumentMeta={instrumentMeta}
         icon={<Image src="/gemini.svg" alt="Gemini" width={16} height={16} />}
       />
 

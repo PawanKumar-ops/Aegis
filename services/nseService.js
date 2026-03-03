@@ -3,16 +3,34 @@ import { safeText, toIsoTime } from "@/utils/validators";
 
 const NSE_ENDPOINT =
   "https://www.nseindia.com/api/corporate-announcements?index=equities&from_date=&to_date=";
+const NSE_HOME = "https://www.nseindia.com";
+
+function buildNseHeaders(cookie = "") {
+  return {
+    Accept: "application/json, text/plain, */*",
+    Referer: "https://www.nseindia.com/companies-listing/corporate-filings-announcements",
+    Origin: "https://www.nseindia.com",
+    "User-Agent": "Mozilla/5.0",
+    ...(cookie ? { Cookie: cookie } : {}),
+  };
+}
+
+function readCookieHeader(response) {
+  const values = response?.headers?.getSetCookie?.();
+  if (!Array.isArray(values) || !values.length) return "";
+  return values.map((entry) => entry.split(";")[0]).join("; ");
+}
 
 export async function fetchNseAnnouncements() {
   try {
+    const warmup = await fetchWithTimeout(NSE_HOME, {
+      headers: buildNseHeaders(),
+    });
+
+    const cookie = warmup?.ok ? readCookieHeader(warmup.response) : "";
+
     const result = await fetchWithTimeout(NSE_ENDPOINT, {
-      headers: {
-        Accept: "application/json, text/plain, */*",
-        Referer: "https://www.nseindia.com/companies-listing/corporate-filings-announcements",
-        Origin: "https://www.nseindia.com",
-        "User-Agent": "Mozilla/5.0",
-      },
+      headers: buildNseHeaders(cookie),
     });
 
     if (!result?.ok) return { ok: false, items: [], error: result.error };
