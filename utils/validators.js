@@ -1,4 +1,6 @@
 const ALLOWED_BIAS = ["Bullish", "Bearish", "Neutral"];
+const ALLOWED_EVENT_TYPES = ["earnings", "dividend", "buyback", "promoter_change", "regulatory", "macro", "other"];
+const ALLOWED_DIRECTION = ["bullish", "bearish", "neutral"];
 
 export function safeText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -45,6 +47,43 @@ export function validateModelAnalysis(input) {
     ok: true,
     data: {
       bias,
+      confidence,
+      reasoning,
+    },
+  };
+}
+
+export function validateEdgeLlmSummary(input) {
+  if (!input || typeof input !== "object") {
+    return { ok: false, error: "LLM payload is not an object." };
+  }
+
+  const event_type = safeText(input.event_type).toLowerCase();
+  const direction = safeText(input.direction).toLowerCase();
+  const confidence = Number(input.confidence);
+  const reasoning = safeText(input.reasoning);
+
+  if (!ALLOWED_EVENT_TYPES.includes(event_type)) {
+    return { ok: false, error: `event_type must be one of: ${ALLOWED_EVENT_TYPES.join(", ")}.` };
+  }
+
+  if (!ALLOWED_DIRECTION.includes(direction)) {
+    return { ok: false, error: `direction must be one of: ${ALLOWED_DIRECTION.join(", ")}.` };
+  }
+
+  if (Number.isNaN(confidence) || confidence < 0 || confidence > 10) {
+    return { ok: false, error: "confidence must be a number between 0 and 10." };
+  }
+
+  if (!reasoning) {
+    return { ok: false, error: "reasoning is required." };
+  }
+
+  return {
+    ok: true,
+    data: {
+      event_type,
+      direction,
       confidence,
       reasoning,
     },
