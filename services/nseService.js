@@ -5,6 +5,11 @@ const NSE_ENDPOINT =
   "https://www.nseindia.com/api/corporate-announcements?index=equities&from_date=&to_date=";
 const NSE_HOME = "https://www.nseindia.com";
 
+function toAbsoluteNseUrl(path = "") {
+  if (!safeText(path)) return "";
+  return /^https?:\/\//i.test(path) ? path : `${NSE_HOME}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
 function buildNseHeaders(cookie = "") {
   return {
     Accept: "application/json, text/plain, */*",
@@ -46,6 +51,7 @@ export async function fetchNseAnnouncements() {
       description:
         safeText(item?.desc || item?.attchmntText || item?.details || item?.subject) ||
         "No description available.",
+      url: toAbsoluteNseUrl(safeText(item?.attchmntFile || item?.detailsLink || item?.url)),
       time: toIsoTime(item?.sort_date || item?.an_dt || item?.date || item?.broadcastdate),
     }));
 

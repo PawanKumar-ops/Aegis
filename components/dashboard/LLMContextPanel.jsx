@@ -207,7 +207,7 @@ export function LLMContextPanel() {
   const averageConfidence = (((openAiData.confidence + geminiData.confidence) / 2) * 100).toFixed(0);
   const tradable = Number(averageConfidence) >= 70;
 
-  const combinedFeed = llmResponse?.fetched_news?.combined_feed || [];
+  const rssNews = llmResponse?.fetched_news?.rss_news || [];
   const nseFeed = llmResponse?.fetched_news?.nse_announcements || [];
 
   return (
@@ -255,12 +255,23 @@ export function LLMContextPanel() {
           </div>
 
           <div className="border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground mb-2">Combined Feed</p>
-            {combinedFeed.length ? (
-              combinedFeed.slice(0, 10).map((item, index) => (
+            <p className="text-xs text-muted-foreground mb-2">RSS News</p>
+            {rssNews.length ? (
+              rssNews.slice(0, 10).map((item, index) => (
                 <div key={`${item.symbol}-${item.time}-${index}`} className="mb-2">
                   <div className="font-semibold text-xs">[{item.type}] {item.symbol}</div>
-                  <div className="text-xs">{item.title}</div>
+                  {item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs underline-offset-2 hover:underline"
+                    >
+                      {item.title}
+                    </a>
+                  ) : (
+                    <div className="text-xs">{item.title}</div>
+                  )}
                 </div>
               ))
             ) : (
