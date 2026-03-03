@@ -76,6 +76,7 @@ export async function orchestrator() {
       fetched_news: {
         nse_announcements: nse.items || [],
         combined_feed: eventFeed,
+        rss_news: rss.items || [],
         source_errors: sourceErrors,
       },
       llm_summary: {

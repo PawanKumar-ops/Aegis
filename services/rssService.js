@@ -30,6 +30,7 @@ function parseRssItems(xml) {
     return rssItems.map((entry) => ({
       title: readTag(entry[0], "title"),
       description: readTag(entry[0], "description"),
+      link: readTag(entry[0], "link"),
       pubDate: readTag(entry[0], "pubDate"),
     }));
   }
@@ -38,6 +39,9 @@ function parseRssItems(xml) {
   return atomItems.map((entry) => ({
     title: readTag(entry[0], "title"),
     description: readTag(entry[0], "summary") || readTag(entry[0], "content"),
+    link:
+      entry[0].match(/<link[^>]*href=["']([^"']+)["']/i)?.[1] ||
+      readTag(entry[0], "id"),
     pubDate: readTag(entry[0], "updated") || readTag(entry[0], "published"),
   }));
 }
@@ -85,6 +89,7 @@ export async function fetchTier1RssFeeds() {
           symbol: "NIFTY",
           title: entry.title || "Untitled market story",
           description: entry.description || "No description available.",
+          url: safeText(entry.link),
           time: toIsoTime(entry.pubDate),
         }))
       );

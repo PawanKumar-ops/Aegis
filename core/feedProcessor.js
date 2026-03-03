@@ -13,6 +13,7 @@ export function normalizeFeedItems(rawItems = []) {
     symbol: safeText(item.symbol) || "UNKNOWN",
     title: safeText(item.title) || "Untitled",
     description: safeText(item.description) || "No description available.",
+    url: safeText(item.url),
     time: toIsoTime(item.time),
   }));
 }
