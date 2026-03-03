@@ -11,6 +11,12 @@ export function toIsoTime(value) {
   return Number.isNaN(parsed) ? new Date().toISOString() : new Date(parsed).toISOString();
 }
 
+export function clampScore(value, max = 10) {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return 0;
+  return Math.max(0, Math.min(numeric, max));
+}
+
 export function parseModelJson(raw) {
   const text = safeText(raw).replace(/```json\s*/gi, "").replace(/```/g, "");
   const first = text.indexOf("{");
@@ -84,6 +90,46 @@ export function validateEdgeLlmSummary(input) {
     data: {
       event_type,
       direction,
+      confidence,
+      reasoning,
+    },
+  };
+}
+
+export function validateLlmEventOutput(input) {
+  if (!input || typeof input !== "object") {
+    return { ok: false, error: "LLM payload is not an object." };
+  }
+
+  const event_type = safeText(input.event_type).toLowerCase();
+  const direction = safeText(input.direction).toLowerCase();
+  const reasoning = safeText(input.reasoning);
+
+  if (!ALLOWED_EVENT_TYPES.includes(event_type)) {
+    return { ok: false, error: `event_type must be one of: ${ALLOWED_EVENT_TYPES.join(", ")}.` };
+  }
+
+  if (!ALLOWED_DIRECTION.includes(direction)) {
+    return { ok: false, error: `direction must be one of: ${ALLOWED_DIRECTION.join(", ")}.` };
+  }
+
+  if (!reasoning) {
+    return { ok: false, error: "reasoning is required." };
+  }
+
+  const materiality_score = clampScore(input.materiality_score, 10);
+  const surprise_score = clampScore(input.surprise_score, 10);
+  const impact_score = clampScore(input.impact_score, 10);
+  const confidence = clampScore(input.confidence, 10);
+
+  return {
+    ok: true,
+    data: {
+      event_type,
+      direction,
+      materiality_score,
+      surprise_score,
+      impact_score,
       confidence,
       reasoning,
     },
