@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,15 +29,12 @@ const derivePanelData = (analysis) => {
     regime,
     bias: normalizedBias,
     confidence: Math.max(0, Math.min(confidenceScore / 10, 1)),
-    newsSummary:
-      analysis["One-line reasoning"] ||
-      analysis.reasoning ||
-      "Model did not provide a one-line reasoning.",
+    newsSummary: analysis["One-line reasoning"] || analysis.reasoning || "Model did not provide a one-line reasoning.",
     timestamp: new Date().toLocaleString(),
   };
 };
 
-const ContextCard = ({ title, icon, panelData }) => {
+const ContextCard = ({ title, icon, panelData, providerPayload }) => {
   const cfg = regimeConfig[panelData.regime] || regimeConfig.UNCLEAR;
   const Icon = cfg.icon;
   const isNoTradeZone = panelData.confidence < 0.6;
@@ -79,10 +77,7 @@ const ContextCard = ({ title, icon, panelData }) => {
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-muted-foreground">Confidence</span>
-            <span
-              className={`text-sm font-mono-data font-semibold ${panelData.confidence >= 0.6 ? "text-profit" : "text-loss"
-                }`}
-            >
+            <span className={`text-sm font-mono-data font-semibold ${panelData.confidence >= 0.6 ? "text-profit" : "text-loss"}`}>
               {(panelData.confidence * 100).toFixed(0)}%
             </span>
           </div>
@@ -95,6 +90,13 @@ const ContextCard = ({ title, icon, panelData }) => {
         <div>
           <span className="text-xs text-muted-foreground block mb-1">News Summary</span>
           <p className="text-xs text-foreground/80 leading-relaxed">{panelData.newsSummary}</p>
+        </div>
+
+        <div>
+          <span className="text-xs text-muted-foreground block mb-1">Model Response</span>
+          <pre className="rounded border border-border bg-muted p-2 text-[11px] overflow-x-auto whitespace-pre-wrap">
+            {JSON.stringify(providerPayload || null, null, 2)}
+          </pre>
         </div>
 
         <div className="flex items-center justify-between pt-1 border-t border-border">
@@ -115,32 +117,40 @@ export function LLMContextPanel() {
         const res = await fetch("/api/llm-context", { cache: "no-store" });
         const data = await res.json();
         setLlmResponse(data);
-      } catch (error) {
-        console.error("Failed to load LLM context", error);
+      } catch {
+        setLlmResponse({ ok: false, error: "Failed to load LLM context." });
       }
     };
 
     loadContext();
   }, []);
 
-  const openAiData = useMemo(() => derivePanelData(llmResponse?.openai?.analysis), [llmResponse]);
-  const geminiData = useMemo(() => derivePanelData(llmResponse?.gemini?.analysis), [llmResponse]);
+  const openAiPayload = llmResponse?.llm_summary?.model_meta?.provider_status?.openai || null;
+  const geminiPayload = llmResponse?.llm_summary?.model_meta?.provider_status?.gemini || null;
+
+  const openAiData = useMemo(() => derivePanelData(openAiPayload?.analysis), [openAiPayload]);
+  const geminiData = useMemo(() => derivePanelData(geminiPayload?.analysis), [geminiPayload]);
 
   const averageConfidence = (((openAiData.confidence + geminiData.confidence) / 2) * 100).toFixed(0);
   const tradable = Number(averageConfidence) >= 70;
+
+  const combinedFeed = llmResponse?.fetched_news?.combined_feed || [];
+  const nseFeed = llmResponse?.fetched_news?.nse_announcements || [];
 
   return (
     <>
       <ContextCard
         title="OpenAI Context & Market Regime"
         panelData={openAiData}
+        providerPayload={openAiPayload}
         icon={<Brain className="h-4 w-4 text-foreground/80" />}
       />
 
       <ContextCard
         title="Gemini Context & Market Regime"
         panelData={geminiData}
-        icon={<img src="gemini.svg" alt="Gemini" className="h-4 w-4" />}
+        providerPayload={geminiPayload}
+        icon={<Image src="/gemini.svg" alt="Gemini" width={16} height={16} />}
       />
 
       <Card className="p-4 space-y-2">
@@ -152,27 +162,41 @@ export function LLMContextPanel() {
 
       <Card>
         <CardHeader className="pb-2 p-4">
-          <CardTitle className="text-sm font-medium">Fetched News (NewsAPI)</CardTitle>
+          <CardTitle className="text-sm font-medium">Fetched News (NewsAPI + NSE)</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-2">
-          {(llmResponse?.combinedFeed || []).length ? (
-            llmResponse.combinedFeed.map((item, index) => (
-              <div key={index}>
-                <div className="font-semibold">
-                  [{item.type}] {item.symbol}
+        <CardContent className="p-4 pt-0 space-y-3">
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">NSE Announcements</p>
+            {nseFeed.length ? (
+              nseFeed.slice(0, 8).map((item, index) => (
+                <div key={`${item.symbol}-${item.time}-${index}`} className="mb-2">
+                  <div className="font-semibold text-xs">[{item.type}] {item.symbol}</div>
+                  <div className="text-xs">{item.title}</div>
                 </div>
-                <div>{item.title}</div>
-              </div>
-            ))
-          ) : (
-            <p className="text-xs text-muted-foreground">No news returned yet.</p>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No NSE announcements returned.</p>
+            )}
+          </div>
+
+          <div className="border-t border-border pt-3">
+            <p className="text-xs text-muted-foreground mb-2">Combined Feed</p>
+            {combinedFeed.length ? (
+              combinedFeed.slice(0, 10).map((item, index) => (
+                <div key={`${item.symbol}-${item.time}-${index}`} className="mb-2">
+                  <div className="font-semibold text-xs">[{item.type}] {item.symbol}</div>
+                  <div className="text-xs">{item.title}</div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground">No news returned yet.</p>
+            )}
+          </div>
+
+          {(llmResponse?.fetched_news?.source_errors || []).length > 0 && (
+            <div className="text-xs text-loss">{llmResponse.fetched_news.source_errors.join(" | ")}</div>
           )}
-          {(llmResponse?.errors || []).length > 0 && (
-            <div className="text-xs text-loss">{llmResponse.errors.join(" ")}</div>
-          )}
-          {llmResponse?.error && (
-            <div className="text-xs text-loss">{llmResponse.error}</div>
-          )}
+          {llmResponse?.error && <div className="text-xs text-loss">{llmResponse.error}</div>}
         </CardContent>
       </Card>
     </>
